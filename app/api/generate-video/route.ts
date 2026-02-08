@@ -1,30 +1,47 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: Request) {
   try {
-    const { topic } = await req.json();
+    const { topic, niche } = await req.json();
 
-    if (!topic) {
-      return NextResponse.json({ error: 'Sujet manquant' }, { status: 400 });
-    }
+    if (!topic) return NextResponse.json({ error: 'Sujet manquant' }, { status: 400 });
 
-    // --- SIMULATION DE L'IA (Sans frais) ---
-    // On attend 1.5 seconde pour faire comme si l'IA réfléchissait
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const script = `[SIMULATION] Voici un script génial sur : ${topic}. C'est une démo car ton crédit OpenAI est épuisé, mais le système fonctionne parfaitement !`;
-
-    // --- SIMULATION ENREGISTREMENT BDD ---
-    // (On ne touche pas à la BDD pour l'instant pour éviter les erreurs d'ID utilisateur)
-    const video_id = Math.floor(Math.random() * 10000);
-
-    return NextResponse.json({ 
-      success: true, 
-      script: script,
-      video_id: video_id
+    // 1. Appel réel à l'IA OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o", // Tu peux utiliser "gpt-4o-mini" pour économiser de l'argent
+      messages: [
+        { role: "system", content: "Tu es un expert TikTok. Écris un script viral de 15 secondes maximum." },
+        { role: "user", content: `Sujet : ${topic}` }
+      ],
+      max_tokens: 100,
     });
 
+    const script = completion.choices[0].message.content || "Erreur de génération";
+
+    // 2. Enregistrement dans Supabase (On utilise l'ID temporaire car pas encore de login)
+    const { error } = await supabase
+      .from('videos')
+      .insert([
+        { 
+          user_id: '00000000-0000-0000-0000-000000000000',
+          title: topic,
+          niche: niche || 'General',
+          status: 'done',
+          views: 0
+        }
+      ]);
+
+    if (error) console.error("Erreur BDD:", error);
+
+    return NextResponse.json({ success: true, script });
   } catch (error: any) {
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

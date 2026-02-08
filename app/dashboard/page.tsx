@@ -1,5 +1,5 @@
 'use client';
-
+import Link from 'next/link';
 import { useState } from 'react';
 
 // --- Icônes SVG ---
@@ -68,12 +68,11 @@ export default function DashboardVisual() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          <NavItem icon={<IconHome />} label="Dashboard" active />
-          <NavItem icon={<IconBot />} label="Mes Machines" />
-          <NavItem icon={<IconVideo />} label="Galerie Vidéos" />
-          <NavItem icon={<IconSettings />} label="Paramètres" />
-        </nav>
-
+  <NavItem icon={<IconHome />} label="Dashboard" active href="/dashboard" />
+  <NavItem icon={<IconBot />} label="Mes Machines" href="/machines" />
+  <NavItem icon={<IconVideo />} label="Galerie Vidéos" href="/videos" />
+  <NavItem icon={<IconSettings />} label="Paramètres" href="/settings" />
+</nav>
         <div className="p-4 border-t border-gray-800">
           <div className="bg-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-400 uppercase font-bold mb-1">Crédits Restants</p>
@@ -231,13 +230,13 @@ export default function DashboardVisual() {
 }
 
 // --- Sous-composants ---
-function NavItem({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
+function NavItem({ icon, label, active = false, href }: { icon: any, label: string, active?: boolean, href: string }) {
   return (
-    <button className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full text-left
+    <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full text-left
       ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
       {icon}
       <span className="font-medium">{label}</span>
-    </button>
+    </Link>
   );
 }
 
