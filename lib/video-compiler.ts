@@ -1,10 +1,10 @@
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg'; // Assure-toi que c'est installé
 import path from 'path';
 import fs from 'fs';
 
-// On dit à fluent-ffmpeg où trouver le programme ffmpeg sur le serveur
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+// On n'utilise plus @ffmpeg-installer/ffmpeg.
+// On suppose que 'ffmpeg' est installé sur le système (apt install ffmpeg).
+// fluent-ffmpeg trouvera la commande tout seul.
 
 export async function compileVideo(imagePath: string, audioPath: string): Promise<string> {
   const outputFileName = `video-${Date.now()}.mp4`;
@@ -21,14 +21,14 @@ export async function compileVideo(imagePath: string, audioPath: string): Promis
       .input(imagePath)
       .input(audioPath)
       .outputOptions([
-        '-map 0:v', // Utiliser la vidéo (image)
-        '-map 1:a', // Utiliser l'audio
+        '-map 0:v', // Image
+        '-map 1:a', // Audio
         '-c:v libx264',
-        '-tune stillimage', // Optimisé pour image fixe
+        '-tune stillimage',
         '-c:a aac',
         '-b:a 192k',
-        '-pix_fmt yuv420p', // Compatible avec les navigateurs
-        '-shortest' // La vidéo dure le temps de l'audio
+        '-pix_fmt yuv420p',
+        '-shortest' 
       ])
       .output(outputPath)
       .on('end', () => resolve(`/videos/${outputFileName}`))
