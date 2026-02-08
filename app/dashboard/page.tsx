@@ -12,8 +12,8 @@ const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" heigh
 export default function DashboardVisual() {
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   
-  // On transforme la liste en "useState" pour pouvoir y ajouter des éléments
   const [recentVideos, setRecentVideos] = useState([
     { id: 1, title: "Les secrets d'Elon Musk", niche: "Business", status: "Terminé", views: "12.5K" },
     { id: 2, title: "Pourquoi tu dors tard", niche: "Facts", status: "Publié", views: "8.2K" },
@@ -25,7 +25,6 @@ export default function DashboardVisual() {
     
     setLoading(true);
     try {
-      // On appelle NOTRE API
       const res = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +36,12 @@ export default function DashboardVisual() {
       if (data.success) {
         alert(`Script généré par l'IA : \n\n${data.script}`);
         
-        // On ajoute la nouvelle vidéo à la liste
+        // On stocke l'URL de la vidéo
+        if (data.videoUrl) {
+          setGeneratedVideoUrl(data.videoUrl);
+        }
+
+        // On ajoute la ligne dans le tableau (une seule fois)
         const newVideo = {
           id: Date.now(),
           title: topic,
@@ -46,7 +50,7 @@ export default function DashboardVisual() {
           views: "0"
         };
         setRecentVideos([newVideo, ...recentVideos]);
-        setTopic(''); // Vide le champ
+        setTopic('');
       } else {
         alert("Erreur : " + data.error);
       }
@@ -68,11 +72,12 @@ export default function DashboardVisual() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-  <NavItem icon={<IconHome />} label="Dashboard" active href="/dashboard" />
-  <NavItem icon={<IconBot />} label="Mes Machines" href="/machines" />
-  <NavItem icon={<IconVideo />} label="Galerie Vidéos" href="/videos" />
-  <NavItem icon={<IconSettings />} label="Paramètres" href="/settings" />
-</nav>
+          <NavItem icon={<IconHome />} label="Dashboard" active href="/dashboard" />
+          <NavItem icon={<IconBot />} label="Mes Machines" href="/machines" />
+          <NavItem icon={<IconVideo />} label="Galerie Vidéos" href="/videos" />
+          <NavItem icon={<IconSettings />} label="Paramètres" href="/settings" />
+        </nav>
+
         <div className="p-4 border-t border-gray-800">
           <div className="bg-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-400 uppercase font-bold mb-1">Crédits Restants</p>
@@ -167,6 +172,21 @@ export default function DashboardVisual() {
                     )}
                   </button>
                 </div>
+
+                {/* --- ZONE D'AFFICHAGE DE LA VIDÉO --- */}
+                {generatedVideoUrl && (
+                  <div className="mt-6 p-4 bg-gray-950 rounded-xl border border-gray-700 text-center animate-fade-in-up">
+                    <h4 className="text-green-400 font-bold mb-2">🎬 Vidéo générée avec succès !</h4>
+                    <video controls width="100%" height="auto" className="rounded-lg shadow-lg border border-gray-800">
+                      <source src={generatedVideoUrl} type="video/mp4" />
+                      Ton navigateur ne supporte pas la vidéo.
+                    </video>
+                    <a href={generatedVideoUrl} download target="_blank" className="block mt-3 text-blue-400 text-sm hover:underline">
+                      Télécharger le fichier MP4
+                    </a>
+                  </div>
+                )}
+
               </div>
 
               {/* Recent Activity Table */}
