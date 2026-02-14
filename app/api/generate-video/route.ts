@@ -10,44 +10,72 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// --- NOUVELLE FONCTION : Générer l'audio avec ElevenLabs ---
+async function generateAudio(text: string): Promise<string> {
+  const voiceId = "21m00Tcm4TlvDq8ikWAM"; // Exemple : Voice "Rachel". Remplace par ton ID si tu veux.
+  const apiUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'xi-api-key': process.env.ELEVENLABS_API_KEY!,
+    },
+    body: JSON.stringify({
+      text: text,
+      model_id: "eleven_multilingual_v2",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.5,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`ElevenLabs Error: ${response.statusText}`);
+  }
+
+  // Convertir le stream en fichier
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  
+  const audioPath = path.join(process.cwd(), 'public', `audio-${Date.now()}.mp3`);
+  fs.writeFileSync(audioPath, buffer);
+
+  return audioPath;
+}
+
 export async function POST(req: Request) {
   try {
     const { topic } = await req.json();
 
     // 1. Génération du Script
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Plus rapide et moins cher
-      messages: [{ role: "system", content: "Écris un script court." }, { role: "user", content: topic }],
+      model: "gpt-4o-mini",
+      messages: [{ role: "system", content: "Écris un script très court (10-15 secondes)." }, { role: "user", content: topic }],
       max_tokens: 100,
     });
     const script = completion.choices[0].message.content || "";
 
-        // 2. Télécharger une image de fond
+    // 2. Télécharger l'image de fond
     const imageUrl = "https://images.pexels.com/photos/1181677/pexels-photo-1181677.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
     const imagePath = path.join(process.cwd(), 'public', `temp-${Date.now()}.jpg`);
     const writer = fs.createWriteStream(imagePath);
     const response = await axios({ url: imageUrl, responseType: 'stream' });
     response.data.pipe(writer);
-
-    // Attendre que l'image soit téléchargée (Version explicite)
     await new Promise<void>((resolve) => {
-        writer.on('finish', resolve);
-    });
+    writer.on('finish', resolve);
+});
 
-    // 3. Utiliser le fichier audio de test (demo.mp3)
-    // NOTE: Pour l'instant, on utilise ton fichier local. 
-    const audioPath = path.join(process.cwd(), 'public', 'demo.mp3');
+    // 3. Générer l'audio avec ElevenLabs (NOUVEAU)
+    const audioPath = await generateAudio(script);
 
-    // Vérification que le fichier audio existe
-    if (!fs.existsSync(audioPath)) {
-      throw new Error("Fichier demo.mp3 introuvable dans le dossier public.");
-    }
-
-    // 4. Compilation Vidéo (Le montage FFmpeg)
+    // 4. Compilation Vidéo (Image + Audio Généré)
     const videoUrl = await compileVideo(imagePath, audioPath);
 
-    // 5. Nettoyage (Supprimer l'image temporaire pour ne pas encombrer)
+    // 5. Nettoyage
     fs.unlinkSync(imagePath);
+    fs.unlinkSync(audioPath); // On supprime l'audio temporaire
 
     // 6. Enregistrement BDD
     await supabase.from('videos').insert([
@@ -57,11 +85,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       success: true, 
       script, 
-      videoUrl: videoUrl // Lien vers la vidéo générée
+      videoUrl: videoUrl 
     });
 
   } catch (error: any) {
-    console.error("Erreur détaillée:", error);
+    console.error("Erreur:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
