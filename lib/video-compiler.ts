@@ -16,16 +16,18 @@ export async function compileVideo(imagePath: string, audioPath: string): Promis
     fs.mkdirSync(videosDir, { recursive: true });
   }
 
-          return new Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
     ffmpeg()
-      .input(imagePath, { loop: 1 }) // <--- NOUVELLE SYNTAXE : Boucle en objet
+      .input(imagePath)
+      // On dit : "Prends l'image, boucle-la (-loop 1), et affiche-la à 25 images/seconde (-framerate 25)"
+      .inputOptions(['-framerate', '25', '-loop', '1']) 
       .input(audioPath)
       .videoCodec('libx264')
       .audioCodec('aac')
       .outputOptions([
-        '-r 30',            // Force 30 FPS
-        '-pix_fmt yuv420p', // Compatibilité
-        '-shortest'         // Coupe quand l'audio finit
+        '-r', '30',            // On convertit en 30fps pour l'export (lisse)
+        '-pix_fmt', 'yuv420p',
+        '-shortest'           // On coupe quand l'audio est fini
       ])
       .output(outputPath)
       .on('end', () => resolve(`/videos/${outputFileName}`))
