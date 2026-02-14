@@ -20,10 +20,12 @@ export async function compileVideo(imagePath: string, audioPath: string): Promis
       .input(audioPath)
       .videoCodec('libx264')
       .audioCodec('aac')
-      .duration(10)      // 🔥 force 10 secondes de vidéo
+      .outputOptions(['-shortest'])      // 🔥 force le nobre de seconde secondes de vidéo
       .outputOptions([
-        '-r 30',
-        '-pix_fmt yuv420p'
+        '-r', '30',                // 30 FPS
+        '-pix_fmt', 'yuv420p',     // Compatibilité
+        '-fflags', '+genpts',      // <--- Génère les timestamps
+        '-movflags', '+faststart'  // <--- Place les métadonnées au début
       ])
       .output(outputPath)
       .on('end', () => resolve(`/videos/${outputFileName}`))
